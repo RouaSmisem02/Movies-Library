@@ -174,27 +174,20 @@ app.use((err, req, res, next) => {
 
 client.connect()
     .then(() => {
-        app.listen(8080, () => {
-            console.log("Listening to port 8080");
-          });
-    });
-// Add error handling middleware
-app.use((err, req, res, next) => {
-    console.error('Error:', err.stack);
-    res.status(500).send({
-        status: 500,
-        responseText: 'Sorry, something went wrong with the server'
-    });
-});
-
-// Connect to PostgreSQL database
-client.connect()
-    .then(() => {
         console.log('Connected to PostgreSQL database');
+
+        // Add error handling middleware
+        app.use((err, req, res, next) => {
+            console.error('Error:', err.stack);
+            res.status(500).send({
+                status: 500,
+                responseText: 'Sorry, something went wrong with the server'
+            });
+        });
 
         // Start Express server
         app.listen(8080, () => {
-            console.log('Express server is listening on port 8080');
+            console.log("Listening to port 8080");
         });
     })
     .catch(error => {
