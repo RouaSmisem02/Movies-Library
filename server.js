@@ -3,9 +3,15 @@ const express = require("express");
 const app = express();
 
 const axios = require('axios');
+app.use(express.json())
+
+const pg = require('pg')
+
 require('dotenv').config();
 
 const moviesData = require('./Movie Data/data.json');
+
+const client = new pg.Client('postgresql://localhost:5432/moviesdatabase')
 
 function Movie(id, title,release_date, posterPath, overview) {
     this.id = id;
@@ -107,6 +113,51 @@ app.get('/', (req, res) => {
 app.get('/favorite', (req, res) => {
     res.send("Welcome to Favorite Page");
 });
+app.get('/addMovie', getaddMovieHandler)
+app.post('/addMovie', addaddMovieHandler)
+
+function getaddMovieHandler(req, res){
+    const sql = 'SELECT * FROM movies';
+    client.query(sql)
+    .then((data) => {
+        res.send(data.rows)
+    })
+    .catch((err) => {
+        errorHandler(err, req, res);
+    })
+}
+
+function addaddMovieHandler(req, res) {
+    const movie = req.body;
+    console.log('Received movie data:', movie);
+
+    const sql = 'INSERT INTO movies (id, title, release_date, poster_path, overview) VALUES ($1, $2, $3, $4, $5) RETURNING *';
+    const values = [movie.id, movie.title, movie.release_date, movie.poster_path, movie.overview];
+
+    client.query(sql, values)
+        .then((data) => {
+            console.log('Successfully inserted movie:', data.rows[0]);
+            res.send("Your data was added");
+        })
+        .catch(error => {
+            console.error('Error inserting movie:', error);
+            res.status(500).send("Internal Server Error");
+        });
+}
+app.get('/viewmovies', (req, res) => {
+    let sql = 'SELECT * FROM movies;'; // Corrected table name from 'movie' to 'movies'
+    client.query(sql)
+        .then((result) => {
+            return res.status(200).json(result.rows);
+        })
+        .catch((error) => {
+            console.error('Error fetching movies:', error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        });
+});
+
+
+
 app.use((req, res) => {
     res.status(404).send({
         status: 404,
@@ -121,6 +172,10 @@ app.use((err, req, res, next) => {
     });
 });
 
-app.listen(8080, () => {
-    console.log("Listening to port 8080");
-  });
+client.connect()
+    .then(() => {
+        app.listen(8080, () => {
+            console.log("Listening to port 8080");
+          });
+    });
+
