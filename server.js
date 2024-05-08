@@ -129,7 +129,7 @@ function getaddMovieHandler(req, res){
 
 function addaddMovieHandler(req, res) {
     const movie = req.body;
-    console.log('Received movie data:', movie);
+    console.log('Received movies data:', movie);
 
     const sql = 'INSERT INTO movies (id, title, release_date, poster_path, overview) VALUES ($1, $2, $3, $4, $5) RETURNING *';
     const values = [movie.id, movie.title, movie.release_date, movie.poster_path, movie.overview];
@@ -178,4 +178,25 @@ client.connect()
             console.log("Listening to port 8080");
           });
     });
+// Add error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Error:', err.stack);
+    res.status(500).send({
+        status: 500,
+        responseText: 'Sorry, something went wrong with the server'
+    });
+});
 
+// Connect to PostgreSQL database
+client.connect()
+    .then(() => {
+        console.log('Connected to PostgreSQL database');
+
+        // Start Express server
+        app.listen(8080, () => {
+            console.log('Express server is listening on port 8080');
+        });
+    })
+    .catch(error => {
+        console.error('Error connecting to PostgreSQL database:', error.message);
+    });
