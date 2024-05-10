@@ -1,13 +1,16 @@
-const express = require("express");
-
+const express = require('express');
+const cors = require('cors');
 const app = express();
 
 const axios = require('axios');
+app.use(cors());
 app.use(express.json())
 
 const pg = require('pg')
 
 require('dotenv').config();
+
+
 
 const moviesData = require('./Movie Data/data.json');
 
@@ -113,8 +116,11 @@ app.get('/', (req, res) => {
 app.get('/favorite', (req, res) => {
     res.send("Welcome to Favorite Page");
 });
-app.get('/addMovie', getaddMovieHandler)
-app.post('/addMovie', addaddMovieHandler)
+
+//******************************************************************************************************************
+//Lab-13
+//app.get('/addMovie', getaddMovieHandler)
+//app.post('/addMovie', addaddMovieHandler)
 
 function getaddMovieHandler(req, res){
     const sql = 'SELECT * FROM movies';
@@ -127,7 +133,7 @@ function getaddMovieHandler(req, res){
     })
 }
 
-function addaddMovieHandler(req, res) {
+/*function addaddMovieHandler(req, res) {
     const movie = req.body;
     console.log('Received movies data:', movie);
 
@@ -145,8 +151,8 @@ function addaddMovieHandler(req, res) {
         });
 }
 app.get('/viewmovies', (req, res) => {
-    let sql = 'SELECT * FROM movies;'; // Corrected table name from 'movie' to 'movies'
-    client.query(sql)
+    let sql = 'SELECT * FROM movies;'; 
+        client.query(sql)
         .then((result) => {
             return res.status(200).json(result.rows);
         })
@@ -154,9 +160,9 @@ app.get('/viewmovies', (req, res) => {
             console.error('Error fetching movies:', error);
             res.status(500).json({ error: 'Internal Server Error' });
         });
-});
+});*/
 
-
+//********************************************************************************************
 
 app.use((req, res) => {
     res.status(404).send({
@@ -172,24 +178,78 @@ app.use((err, req, res, next) => {
     });
 });
 
+//***************************************************************************************************
+//Lab-14
+app.put('/update/:id',updateHandler);
+app.delete('/deleteMovie/:id',deleteHandler);
+app.get('/getmovie/:id', getmovieHandeler);
+app.use(errorHandler);
+
+//Update req
+function updateHandler(req, res) {
+    const id = req.params.id;
+
+    const sql = `UPDATE movies SET title = $1, release_date = $2, poster_path = $3, overview = $4 WHERE id = ${id} RETURNING *;`
+    const values = [req.body.title, req.body.release_date, req.body.poster_path, req.body.overview];
+    client.query(sql, values)
+        .then((data) => {
+            res.status(200).send(data.rows)
+        })
+        .catch(error => {
+            errorHandler(error, req, res);
+        });
+}
+
+//delete req
+function deleteHandler(req, res) {
+    console.log("Delete route hit with ID:", req.params.id);
+    const id = req.params.id;
+    const sql = `DELETE FROM movies WHERE id = ${id}`;
+
+    client.query(sql) // Corrected 'ID' to 'id'
+        .then((result)=> {
+            console.log('Movie deleted:', result.rows);
+            res.status(204).json({});
+            
+        })
+        .catch((error) => {
+            console.error('Error deleting a movie:', error);
+            res.status(500).send('Error deleting movie');
+        });
+}
+
+// get req
+function getmovieHandeler(req, res) {
+    const id = req.params.id;
+    const sql = `SELECT * FROM movies WHERE id = ${id}`;
+    client.query(sql)
+   .then((data) => {
+        res.send(data.rows)
+    })
+    .catch((err) => {
+        errorHandler(err, req, res);
+    })
+}
+
+
+
+
+
+
+
+
+//***************************************************************************************************
+function errorHandler(erorr, req, res) {
+    const err = {
+        status: 500,
+        massage: erorr
+    }
+    res.status(500).send(err);
+}
+
 client.connect()
     .then(() => {
-        console.log('Connected to PostgreSQL database');
-
-        // Add error handling middleware
-        app.use((err, req, res, next) => {
-            console.error('Error:', err.stack);
-            res.status(500).send({
-                status: 500,
-                responseText: 'Sorry, something went wrong with the server'
-            });
-        });
-
-        // Start Express server
         app.listen(8080, () => {
             console.log("Listening to port 8080");
         });
-    })
-    .catch(error => {
-        console.error('Error connecting to PostgreSQL database:', error.message);
-    });
+})
